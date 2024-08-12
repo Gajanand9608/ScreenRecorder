@@ -7,14 +7,18 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.graphics.Bitmap
+import android.graphics.PixelFormat
 import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
+import android.media.ImageReader
 import android.media.MediaRecorder
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.Environment
 import android.os.Handler
+import android.os.HandlerThread
 import android.os.IBinder
 import android.os.Looper
 import android.util.Log
@@ -22,6 +26,8 @@ import android.view.WindowManager
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import java.io.File
+import java.io.FileOutputStream
+import java.nio.ByteBuffer
 
 class MyMediaProjectionService : Service() {
 
@@ -29,6 +35,7 @@ class MyMediaProjectionService : Service() {
     private lateinit var mediaProjection: MediaProjection
     private lateinit var mMediaRecorder: MediaRecorder
     private lateinit var virtualDisplay: VirtualDisplay
+    private lateinit var imageReader: ImageReader
 
     override fun onBind(intent: Intent?): IBinder? {
         return null
@@ -39,6 +46,90 @@ class MyMediaProjectionService : Service() {
         mediaProjectionManager = getSystemService(MediaProjectionManager::class.java)
         myForegroundService()
     }
+
+
+
+    @RequiresApi(Build.VERSION_CODES.R)
+    private fun setupImageReader() {
+        val windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
+        val windowMetrics = windowManager.currentWindowMetrics
+        val width = windowMetrics.bounds.width()
+        val height = windowMetrics.bounds.height()
+
+        imageReader = ImageReader.newInstance(
+            width,
+            height,
+            PixelFormat.RGBA_8888,
+            2 // Buffer count
+        )
+    }
+
+    @RequiresApi(Build.VERSION_CODES.R)
+    private fun captureScreenshot() {
+        val outputDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+        val outputFile = File(outputDir, "screenshot.png")
+
+        val handlerThread = HandlerThread("ScreenshotThread")
+        handlerThread.start()
+        val handler = Handler(handlerThread.looper)
+
+        val surface = imageReader.surface
+
+        mediaProjection.registerCallback(object : MediaProjection.Callback() {
+            override fun onStop() {
+                super.onStop()
+                Log.d("Gajanand", "onStop: mediaProjection stopeed")
+//                    stopScreenRecording()
+            }
+        }, null)
+
+        virtualDisplay = mediaProjection.createVirtualDisplay(
+            "ScreenCapture",
+            imageReader.width,
+            imageReader.height,
+            resources.displayMetrics.densityDpi,
+            DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+            surface,
+            null,
+            handler
+        )
+
+        imageReader.setOnImageAvailableListener({ reader ->
+            var image = reader.acquireLatestImage()
+            image?.let {
+                val planes = image.planes
+                val buffer: ByteBuffer = planes[0].buffer
+                val pixelStride: Int = planes[0].pixelStride
+                val rowStride: Int = planes[0].rowStride
+                val rowPadding: Int = rowStride - pixelStride * image.width
+
+                val bitmap = Bitmap.createBitmap(
+                    image.width + rowPadding / pixelStride,
+                    image.height,
+                    Bitmap.Config.ARGB_8888
+                )
+                bitmap.copyPixelsFromBuffer(buffer)
+
+                image.close()
+
+                saveBitmapToFile(bitmap, outputFile)
+                Log.d("Gajanand", "Screenshot saved: ${outputFile.path}")
+            }
+        }, handler)
+    }
+
+    private fun saveBitmapToFile(bitmap: Bitmap, file: File) {
+        var outputStream: FileOutputStream? = null
+        try {
+            outputStream = FileOutputStream(file)
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+        } catch (e: Exception) {
+            Log.e("Gajanand", "Error saving screenshot: ${e.message}", e)
+        } finally {
+            outputStream?.close()
+        }
+    }
+
 
     @RequiresApi(Build.VERSION_CODES.R)
     private fun startScreenRecording() {
@@ -186,7 +277,9 @@ class MyMediaProjectionService : Service() {
         Log.d("Gajanand", "onStartCommand: resultCode $resultCode ")
         Log.d("Gajanand", "onStartCommand: data $data ")
 
-        startScreenRecording()
+//        startScreenRecording()
+        setupImageReader()
+        captureScreenshot()
 
         return START_STICKY
     }
