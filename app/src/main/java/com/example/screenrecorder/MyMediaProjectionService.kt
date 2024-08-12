@@ -9,7 +9,6 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
-import android.media.CamcorderProfile
 import android.media.MediaRecorder
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
@@ -129,7 +128,7 @@ class MyMediaProjectionService : Service() {
             if (::mMediaRecorder.isInitialized) {
                 mMediaRecorder.stop()
                 mediaProjection.stop()
-                mMediaRecorder.reset() // Reset the MediaRecorder to release resources
+                mMediaRecorder.reset()
                 mMediaRecorder.release()
                 Log.d("Gajanand", "Screen recording stopped.")
             }
