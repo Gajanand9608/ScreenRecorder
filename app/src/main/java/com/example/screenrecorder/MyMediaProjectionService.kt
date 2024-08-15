@@ -273,12 +273,13 @@ class MyMediaProjectionService : Service() {
             intent?.getIntExtra("resultCode", RESULT_CANCELED) ?: return START_NOT_STICKY
         val data = intent.getParcelableExtra<Intent>("data")
 
+
         mediaProjection = mediaProjectionManager.getMediaProjection(resultCode, data!!)
         Log.d("Gajanand", "onStartCommand: resultCode $resultCode ")
         Log.d("Gajanand", "onStartCommand: data $data ")
 
         startScreenRecording()
-        setupImageReader()
+//        setupImageReader()
 //        captureScreenshot()
 
         return START_STICKY
