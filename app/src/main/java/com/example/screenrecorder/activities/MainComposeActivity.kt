@@ -1,4 +1,4 @@
-package com.example.screenrecorder
+package com.example.screenrecorder.activities
 
 import android.Manifest
 import android.content.Intent
@@ -6,19 +6,23 @@ import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import com.example.screenrecorder.databinding.ActivityMain2Binding
-import com.example.screenrecorder.databinding.ActivityMainBinding
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
+import com.example.screenrecorder.MyMediaProjectionService
+import com.example.screenrecorder.activities.ui.theme.ScreenRecorderTheme
 
-class MainActivity : AppCompatActivity() {
+class MainComposeActivity : ComponentActivity() {
 
-    private lateinit var binding: ActivityMainBinding
     lateinit var mediaProjectionManager : MediaProjectionManager
     lateinit var mediaProjection : MediaProjection
     private var TAG = "MainActivity"
@@ -26,7 +30,6 @@ class MainActivity : AppCompatActivity() {
     companion object {
         val SCREEN_CAPTURE_REQUEST_CODE = 100
     }
-
 
     val startMediaProjection = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -44,17 +47,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-
-//    private val requestPermissionLauncher = registerForActivityResult(
-//        ActivityResultContracts.RequestMultiplePermissions()
-//    ) { isGranted: Boolean ->
-//        if (isGranted) {
-//            requestMediaProjection()
-//        } else {
-//            Log.d("Gajanand", "Audio permission denied.")
-//            Toast.makeText(this, "Please give Audio permission ", Toast.LENGTH_SHORT).show()
-//        }
-//    }
 
     private val permissionResultLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -77,22 +69,24 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-
+        enableEdgeToEdge()
         requestPermissions()
-
-        binding.moveToNextScreen.setOnClickListener {
-            val intent = Intent(this, MainActivity2::class.java)
-            startActivity(intent)
+        setContent {
+            ScreenRecorderTheme {
+                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                    Greeting(
+                        name = "Android",
+                        modifier = Modifier.padding(innerPadding)
+                    )
+                }
+            }
         }
     }
 
     private fun requestMediaProjection() {
 //        if (!hasMediaProjectionPermission()) {
-            mediaProjectionManager = getSystemService(MediaProjectionManager::class.java)
-            startMediaProjection.launch(mediaProjectionManager.createScreenCaptureIntent())
+        mediaProjectionManager = getSystemService(MediaProjectionManager::class.java)
+        startMediaProjection.launch(mediaProjectionManager.createScreenCaptureIntent())
 //        } else {
 //            startScreenRecordingServiceDirectly() // Directly start the service if permission was already granted
 //        }
@@ -118,5 +112,21 @@ class MainActivity : AppCompatActivity() {
             putBoolean("hasMediaProjectionPermission", true)
             apply()
         }
+    }
+}
+
+@Composable
+fun Greeting(name: String, modifier: Modifier = Modifier) {
+    Text(
+        text = "Hello $name!",
+        modifier = modifier
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+fun GreetingPreview() {
+    ScreenRecorderTheme {
+        Greeting("Android")
     }
 }

@@ -277,9 +277,9 @@ class MyMediaProjectionService : Service() {
         Log.d("Gajanand", "onStartCommand: resultCode $resultCode ")
         Log.d("Gajanand", "onStartCommand: data $data ")
 
-//        startScreenRecording()
+        startScreenRecording()
         setupImageReader()
-        captureScreenshot()
+//        captureScreenshot()
 
         return START_STICKY
     }

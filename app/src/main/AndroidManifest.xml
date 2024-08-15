@@ -4,9 +4,8 @@
 
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
-    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:allowBackup="true"
@@ -18,6 +17,17 @@
         android:supportsRtl="true"
         android:theme="@style/Base.Theme.ScreenRecorder"
         tools:targetApi="31">
+        <activity
+            android:name=".activities.MainComposeActivity"
+            android:exported="true"
+            android:label="@string/title_activity_main_compose"
+            android:theme="@style/Base.Theme.ScreenRecorder">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
         <activity
             android:name=".MainActivity2"
             android:exported="false"
@@ -35,9 +45,8 @@
 
         <service
             android:name=".MyMediaProjectionService"
-            android:foregroundServiceType="mediaProjection"
-            android:exported="false">
-        </service>
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection"></service>
     </application>
 
 </manifest>
