@@ -2,7 +2,6 @@ package com.example.screenrecorder.activities
 
 import android.Manifest
 import android.content.Intent
-import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.Bundle
@@ -14,6 +13,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -38,6 +38,7 @@ class MainComposeActivity : ComponentActivity() {
     private val viewModel by viewModels<MainViewModel>()
     private lateinit var mediaProjectionManager : MediaProjectionManager
     private var TAG = "MainActivity"
+    private var isRecording = true
 
     private val startMediaProjection = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -46,6 +47,7 @@ class MainComposeActivity : ComponentActivity() {
             val serviceIntent = Intent(this, MyMediaProjectionService::class.java).apply {
                 putExtra("resultCode", result.resultCode)
                 putExtra("data", result.data)
+                putExtra("isRecording", isRecording)
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 startForegroundService(serviceIntent)
@@ -102,6 +104,7 @@ class MainComposeActivity : ComponentActivity() {
                                     stopService(Intent(this@MainComposeActivity, MyMediaProjectionService::class.java))
                                 }else{
                                     // start recording
+                                    isRecording = true
                                     requestMediaProjection()
                                 }
                             }
@@ -112,6 +115,21 @@ class MainComposeActivity : ComponentActivity() {
                     }
                 }) { innerPadding ->
                     Surface(modifier = Modifier.padding(innerPadding)) {
+                        Button(onClick = {
+                            scope.launch(Dispatchers.IO) {
+                                val currentStatus = viewModel.isTakingScreenShot.value
+                                if(currentStatus == null || currentStatus == false){
+                                    viewModel.setScreenShotStatus(true)
+                                    isRecording = false
+                                    requestMediaProjection()
+                                }else{
+                                    viewModel.setScreenShotStatus(false)
+                                    stopService(Intent(this@MainComposeActivity, MyMediaProjectionService::class.java))
+                                }
+                            }
+                        }) {
+                            Text(text = "Take screenshot")
+                        }
                         if(viewModel.isRecordingState.value){
                             Toast.makeText(this,"Recording started", Toast.LENGTH_LONG).show()
                         }else{

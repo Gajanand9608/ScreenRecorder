@@ -12,7 +12,14 @@ class MainViewModel: ViewModel() {
     private val _isRecordingMutableState : MutableState<Boolean> = mutableStateOf(false)
     val isRecordingState : State<Boolean> = _isRecordingMutableState
 
+    private val _isTakingScreenShot : MutableState<Boolean?> = mutableStateOf(null)
+    val isTakingScreenShot : State<Boolean?> = _isTakingScreenShot
+
     fun setRecordingStatus(status : Boolean){
         _isRecordingMutableState.value = status
+    }
+
+    fun setScreenShotStatus(status: Boolean){
+        _isTakingScreenShot.value = status
     }
 }

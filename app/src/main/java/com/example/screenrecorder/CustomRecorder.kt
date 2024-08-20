@@ -1,6 +1,7 @@
 package com.example.screenrecorder
 
 import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.PixelFormat
 import android.media.ImageReader
@@ -12,6 +13,8 @@ import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
 import android.media.projection.MediaProjection
 import android.os.Environment
+import android.os.Handler
+import android.os.HandlerThread
 import androidx.annotation.RequiresApi
 import java.io.File
 import java.io.FileOutputStream
@@ -114,74 +117,100 @@ class CustomRecorder(
             Log.d("CustomRecorder", "Error stopping recording: ${e.message}", e)
         }
     }
-//
-//    @RequiresApi(Build.VERSION_CODES.R)
-//    fun setupImageReader() {
-//        val windowMetrics = windowManager.currentWindowMetrics
-//        val width = windowMetrics.bounds.width()
-//        val height = windowMetrics.bounds.height()
-//
-//        imageReader = ImageReader.newInstance(
-//            width,
-//            height,
-//            PixelFormat.RGBA_8888,
-//            2 // Buffer count
-//        )
-//    }
-//
-//    @RequiresApi(Build.VERSION_CODES.R)
-//    fun captureScreenshot() {
-//        val outputDir = windowManager.context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
-//        val outputFile = File(outputDir, "screenshot.png")
-//
-//        val handlerThread = HandlerThread("ScreenshotThread").apply { start() }
-//        val handler = Handler(handlerThread.looper)
-//
-//        val surface = imageReader.surface
-//
-//        virtualDisplay = mediaProjection.createVirtualDisplay(
-//            "ScreenshotCapture",
-//            imageReader.width,
-//            imageReader.height,
-//            windowManager.context.resources.displayMetrics.densityDpi,
-//            DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-//            surface,
-//            null,
-//            handler
-//        )
-//
-//        imageReader.setOnImageAvailableListener({ reader ->
-//            val image = reader.acquireLatestImage()
-//            image?.let {
-//                val planes = image.planes
-//                val buffer: ByteBuffer = planes[0].buffer
-//                val pixelStride: Int = planes[0].pixelStride
-//                val rowStride: Int = planes[0].rowStride
-//                val rowPadding: Int = rowStride - pixelStride * image.width
-//
-//                val bitmap = Bitmap.createBitmap(
-//                    image.width + rowPadding / pixelStride,
-//                    image.height,
-//                    Bitmap.Config.ARGB_8888
-//                )
-//                bitmap.copyPixelsFromBuffer(buffer)
-//                image.close()
-//
-//                saveBitmapToFile(bitmap, outputFile)
-//                Log.d("CustomRecorder", "Screenshot saved: ${outputFile.path}")
-//            }
-//        }, handler)
-//    }
-//
-//    private fun saveBitmapToFile(bitmap: Bitmap, file: File) {
-//        var outputStream: FileOutputStream? = null
-//        try {
-//            outputStream = FileOutputStream(file)
-//            bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
-//        } catch (e: Exception) {
-//            Log.e("CustomRecorder", "Error saving screenshot: ${e.message}", e)
-//        } finally {
-//            outputStream?.close()
-//        }
-//    }
+
+    @RequiresApi(Build.VERSION_CODES.R)
+    fun setupImageReader() {
+        val windowMetrics = windowManager.currentWindowMetrics
+        val width = windowMetrics.bounds.width()
+        val height = windowMetrics.bounds.height()
+
+        imageReader = ImageReader.newInstance(
+            width,
+            height,
+            PixelFormat.RGBA_8888,
+            2 // Buffer count
+        )
+    }
+
+    @RequiresApi(Build.VERSION_CODES.R)
+    fun captureScreenshot() {
+        val outputDir = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+        val outputFile = File(outputDir, "screenshot.png")
+
+        val handlerThread = HandlerThread("ScreenshotThread").apply { start() }
+        val handler = Handler(handlerThread.looper)
+
+        val surface = imageReader.surface
+
+        mediaProjection.registerCallback(object : MediaProjection.Callback() {
+            override fun onStop() {
+                super.onStop()
+                Log.d("CustomRecorder", "onStop: mediaProjection screenshot stopped")
+            }
+        }, null)
+
+        val callBack = object : VirtualDisplay.Callback() {
+            override fun onPaused() {
+                super.onPaused()
+                Log.d("CustomRecorder", "onPaused: screenshot ")
+            }
+
+            override fun onResumed() {
+                super.onResumed()
+                Log.d("CustomRecorder", "onResumed: screenshot ")
+            }
+
+            override fun onStopped() {
+                super.onStopped()
+                Log.d("CustomRecorder", "onStopped: screenshot ")
+            }
+        }
+
+        virtualDisplay = mediaProjection.createVirtualDisplay(
+            "ScreenshotCapture",
+            imageReader.width,
+            imageReader.height,
+            context.resources.displayMetrics.densityDpi,
+            DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+            surface,
+            callBack,
+            null
+        )
+
+        imageReader.setOnImageAvailableListener({ reader ->
+            val image = reader.acquireLatestImage()
+            image?.let {
+                val planes = image.planes
+                val buffer: ByteBuffer = planes[0].buffer
+                val pixelStride: Int = planes[0].pixelStride
+                val rowStride: Int = planes[0].rowStride
+                val rowPadding: Int = rowStride - pixelStride * image.width
+
+                val bitmap = Bitmap.createBitmap(
+                    image.width + rowPadding / pixelStride,
+                    image.height,
+                    Bitmap.Config.ARGB_8888
+                )
+                bitmap.copyPixelsFromBuffer(buffer)
+                image.close()
+
+                saveBitmapToFile(bitmap, outputFile)
+                Log.d("CustomRecorder", "Screenshot saved: ${outputFile.path}")
+            }
+        }, null)
+
+    }
+
+    private fun saveBitmapToFile(bitmap: Bitmap, file: File) {
+        var outputStream: FileOutputStream? = null
+        try {
+            outputStream = FileOutputStream(file)
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+            context.stopService(Intent(context, MyMediaProjectionService::class.java))
+        } catch (e: Exception) {
+            Log.e("CustomRecorder", "Error saving screenshot: ${e.message}", e)
+        } finally {
+            outputStream?.close()
+        }
+    }
 }
